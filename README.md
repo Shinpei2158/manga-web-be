@@ -74,3 +74,30 @@ CLIENT_EMAIL=your_firebase_client_email
 # SMTP Configuration (Email Notifications)
 SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_app_password
+```
+## Getting Started
+Follow these steps to set up the project locally:
+
+### 1. Clone the Repository
+```bash
+git clone [https://github.com/LGK1412/manga-web-be.git](https://github.com/LGK1412/manga-web-be.git)
+```
+```bash
+cd manga-web-be
+```
+
+### 2. Install Dependencies
+Make sure you have Node.js installed, then run:
+
+```bash
+npm install
+```
+
+### 3. Set Up Environment Variables
+Create a .env.local file in the root directory and populate it with your configuration keys as shown in the Environment Variables section above.
+
+### 4. Run the Development Server
+```bash
+npm run start:dev
+```
+The back-end will run at http://localhost:3333, test with Postman or run the front-end (link above) to run the project in browser at http://localhost:3000.
