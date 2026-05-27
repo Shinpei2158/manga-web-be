@@ -1,67 +1,76 @@
-# MangaWord - Frontend Web App
+# MangaWord - Backend API
 
-A high-performance, responsive, and feature-rich frontend application tailored for immersive comic (manga) and light novel reading experiences. Built with modern web technologies, the platform focuses on speed, seamless state management, and real-time interactive user engagement.
+A robust, enterprise-grade backend system for a cross-platform web application that delivers both comics (manga) and light novels. The platform integrates smart AI assistance, localized tax compliance processing, and gamified user engagement mechanics.
 
-> 🖥️ **Backend API Repository:** [Explore MangaWord Backend API](https://github.com/Shinpei2158/manga-web-be)
-
----
-
-## 📸 User Interface Preview
-
-*Provide clear screenshots or GIFs of your application below to showcase your UI/UX design skills.*
-
-| Top-up & VNPay | Achievements |
-|---|---|
-| <img src="./screenshots/reader-mode.png" width="400" alt="Manga & Novel Reader"/> | <img src="./screenshots/wallet-rewards.png" width="400" alt="VNPAY & Gamification"/> |
-
-| Tax & Accounting Dashboard | Excel File Format |
-|---|---|
-| <img src="./screenshots/accounting-tax.png" width="400" alt="Accounting Panel"/> | <img src="./screenshots/ai-chat.png" width="400" alt="AI Interface"/> |
+> **Frontend Repository:** [Explore MangaWord Frontend](https://github.com/Shinpei2158/manga-web-fe)
 
 ---
 
-## Tech Stack
-- **Framework:** Next.js (App Router, TypeScript)
-- **Styling & UI:** Tailwind CSS, Lucide Icons
-- **State Management:** Zustand / Redux Toolkit *(Choose the one you actually used)*
-- **Real-Time Interaction:** Socket.IO Client
-- **Authentication & Services:** Firebase (Auth, Cloud Messaging)
+## Tech Stack & Architecture
+- **Core Framework:** NestJS (TypeScript) - Structured with clean, modular architecture.
+- **Database:** MongoDB with Mongoose (ODM).
+- **Real-Time Communications:** Socket.IO for instant user interactions.
+- **Third-Party Integrations:** VNPAY Payment Gateway, Firebase Admin SDK (Push Notifications), Nodemailer (SMTP).
+- **AI Engine:** Google Gemini API.
 
 ---
 
-## Key Client Features
+## Key System Features
 
-### 1. Immersive Reading Modes
-- Optimized **Comic/Manga Viewer** with infinite scroll and lazy-loading for heavy images.
-- Customizable **Light Novel Reader** featuring font adjustments, dark/light themes, and responsive layout for mobile screens.
-
-### 2. Gamified Engagement & Rewards
-- Dedicated user dashboard for tracking **Daily Check-ins**, unlocking **Achievements**, and managing user points.
-
-### 3. Integrated FinTech & Tax Interfaces
-- Smooth **VNPAY Checkout workflows** with direct user interface redirect handling.
-- Comprehensive **Author/Accountant Workspace** to monitor earnings, calculate automated withholding tax deductions, and export payroll/tax data.
-
-### 4. Interactive & AI Features
-- Real-time comment sections and system push notifications via **Socket.IO** and **Firebase Cloud Messaging**.
-- Built-in **AI Helper interface** interacting with the backend for content lookup and automated chat responses.
+- **Content & Licensing Management:** Complete CRUD and workflows for stories, chapters, genres, and authors, supporting platform policies and license validation.
+- **Role-Based Access Control (RBAC):** Strict authentication & authorization for Multiple Roles (Admin, Author, Accountant, and Reader).
+- **AI Integration:** Content analysis, automated tagging, and smart search capabilities powered by Google Gemini.
+- **Real-time Engagement:** Instant comments, replies, and notifications.
 
 ---
 
-## Environment Variables (.env.local)
+## My Core Contributions (Backend Architecture & Business Logic)
 
-Create a `.env.local` file in the root directory and configure the following:
+As the primary Backend Developer, I engineered the core financial and engagement modules of the system:
+
+### 1. Payment Gateway Integration (VNPAY)
+- Implemented **VNPAY Sandbox** integration to handle secure point deposits and cash-out/withdrawal workflows.
+- Designed **Payment Redirect processing loops** to securely read transaction return parameters and automate real-time user balance updates.
+
+### 2. Automated Tax Compliance Module
+- Developed a dynamic tax calculation engine driven by custom **Business Rules** and regional tax compliance laws.
+- Processed automated withholding tax deductions during author payout/withdrawal sequences.
+- Built **Data Export features (CSV/Excel)** to streamline transaction histories, helping the accounting team with seamless tax declaration and fiscal settlements.
+
+### 3. Gamification & Retention Logic
+- Designed and optimized database schemas for a **Daily Check-in Reward** system.
+- Engineered a scalable **Achievement System** that tracks user behavior and unlocks milestones dynamically, boosting overall user engagement.
+
+---
+
+## ⚙️ Environment Variables Configuration
+
+To run this project, create a `.env` file in the root directory and configure the following variables:
 
 ```env
-# API Gateway Endpoint
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
+# Application Configuration
+PORT=3000
+JWT_SECRET=your_jwt_secret_key
+CLIENT_URL=http://localhost:3000
 
-# Authentication (Google & Firebase)
-NEXT_PUBLIC_GG_ID=your_google_client_id
-NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_key
-NEXT_PUBLIC_AUTH_DOMAIN=your_auth_domain
-NEXT_PUBLIC_PROJECT_ID=your_project_id
-NEXT_PUBLIC_STORAGE_BUCKET=your_storage_bucket
-NEXT_PUBLIC_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_APP_ID=your_app_id
-NEXT_PUBLIC_MEASUREMENT_ID=your_measurement_id
+# Database
+DATABASE_URL=mongodb+srv://...
+
+# VNPAY Payment Gateway (Sandbox)
+VNP_TMNCODE=your_vnpay_terminal_code
+VNP_HASHSECRET=your_vnpay_hash_secret
+VNP_URL=[https://sandbox.vnpayment.vn/paymentv2/vpcpay.html](https://sandbox.vnpayment.vn/paymentv2/vpcpay.html)
+VNP_RETURNURL=http://localhost:3000/api/vnpay/callback
+
+# Google Gemini AI
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-pro
+
+# Firebase Admin SDK (Notifications)
+PROJECT_ID=your_firebase_project_id
+PRIVATE_KEY="your_firebase_private_key"
+CLIENT_EMAIL=your_firebase_client_email
+
+# SMTP Configuration (Email Notifications)
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
