@@ -16,7 +16,7 @@ A robust, modular backend system for an online comic (manga) and light novel rea
 
 ---
 
-## 🌟 Core Contributions & API Specifications
+## Core Contributions & API Specifications
 
 I engineered the following core backend modules, including database schemas, business logic services, event tracking, and secure API endpoints:
 
@@ -127,7 +127,7 @@ SMTP_PASS=your_smtp_app_password
 
 ---
 
-## 🚀 Getting Started Locally
+## Getting Started Locally
 
 1. Install project dependencies:
    ```bash
