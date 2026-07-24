@@ -4,7 +4,7 @@ A robust, modular backend system for an online comic (manga) and light novel rea
 
 ---
 
-## 🛠️ Tech Stack & Key Libraries
+## Tech Stack & Key Libraries
 * **Core Framework:** NestJS (TypeScript)
 * **Database:** MongoDB with Mongoose (ODM)
 * **Real-Time Communications:** Socket.IO (for instant comments and live notifications)
@@ -88,7 +88,7 @@ A secured collection of APIs protected by role guards to manage billing, payouts
 
 ---
 
-## ⚙️ Environment Variables Configuration (.env)
+## Environment Variables Configuration (.env)
 
 Create a `.env` file in the root folder of the backend:
 
