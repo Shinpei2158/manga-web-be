@@ -1,103 +1,140 @@
 # MangaWord - Backend API
 
-A robust, enterprise-grade backend system for a cross-platform web application that delivers both comics (manga) and light novels. The platform integrates smart AI assistance, localized tax compliance processing, and gamified user engagement mechanics.
-
-> **Frontend Repository:** [Explore MangaWord Frontend](https://github.com/Shinpei2158/manga-web-fe)
+A robust, modular backend system for an online comic (manga) and light novel reading platform. Built with NestJS and MongoDB, the system features a modular architecture, fine-grained access control, FinTech payment integrations, automated financial management/tax compliance, and gamification mechanics.
 
 ---
 
-## Tech Stack & Architecture
-- **Core Framework:** NestJS (TypeScript) - Structured with clean, modular architecture.
-- **Database:** MongoDB with Mongoose (ODM).
-- **Real-Time Communications:** Socket.IO for instant user interactions.
-- **Third-Party Integrations:** VNPAY Payment Gateway, Firebase Admin SDK (Push Notifications), Nodemailer (SMTP).
-- **AI Engine:** Google Gemini API.
+## 🛠️ Tech Stack & Key Libraries
+* **Core Framework:** NestJS (TypeScript)
+* **Database:** MongoDB with Mongoose (ODM)
+* **Real-Time Communications:** Socket.IO (for instant comments and live notifications)
+* **AI Engine:** Google Gemini AI SDK (`@google/generative-ai` for automated content moderation and AI assistance)
+* **Cloud Storage:** Cloudinary API (storing transaction payment receipts and author KYC identification documents)
+* **Notifications:** Firebase Admin SDK (FCM push notifications) & Nodemailer (SMTP emails)
+* **Financial Reporting:** ExcelJS (generating spreadsheet reports), Archiver (packaging annual reports into ZIP files)
+* **Document Generation:** PDFKit (exporting PDF documents)
 
 ---
 
-## Key System Features
+## 🌟 Core Contributions & API Specifications
 
-- **Content & Licensing Management:** Complete CRUD and workflows for stories, chapters, genres, and authors, supporting platform policies and license validation.
-- **Role-Based Access Control (RBAC):** Strict authentication & authorization for Multiple Roles (Admin, Author, Accountant, and Reader).
-- **AI Integration:** Content analysis, automated tagging, and smart search capabilities powered by Google Gemini.
-- **Real-time Engagement:** Instant comments, replies, and notifications.
+I engineered the following core backend modules, including database schemas, business logic services, event tracking, and secure API endpoints:
+
+### 1. VNPAY Payment Gateway Integration (`/api/vnpay`)
+Processes secure point deposits using VNPAY Sandbox:
+* **Payment URL Generation (`POST /api/vnpay/create-payment-url`):**
+  * Validates the client's selected package, calls `topupService.getEffectivePoints` to fetch the point credits (handling double-point reward rules).
+  * Creates a unique `txnRef` mapping using: `[8 characters of hashed userId][timestamp]` to guarantee it remains within VNPAY's 32-character limits.
+  * Formats transaction variables according to VNPAY 2.1.0 specifications and hashes the query using `sha512` with the server's secret key.
+  * Inserts a transaction record in the database with a default `pending` status and returns the VNPAY checkout URL.
+* **Redirection Callback (`GET /api/vnpay/return`):**
+  * Receives transaction parameters from VNPAY's response.
+  * Re-hashes query parameters using HMAC-SHA512 to verify the signature (`vnp_SecureHash`).
+  * If the signature is verified and VNPAY status reports success (`vnp_ResponseCode === '00'` and `vnp_TransactionStatus === '00'`), calls `topupService.handlePaymentSuccess` to set the database status to `success` and credit points to the user's wallet.
+  * If validation fails or the transaction fails, marks status as `failed`.
+  * Redirects the user back to the client interface (`CLIENT_URL`) with result parameters (e.g. `?payment=success&txn=...` or `?payment=failed`).
+
+### 2. Daily Check-in Rewards (`/api/checkin`)
+Implements weekly progressive check-ins to boost user retention:
+* **Core Logic:**
+  * Checks are logged per calendar week, stored in an array of booleans (`checkins: [Sun, Mon, Tue, Wed, Thu, Fri, Sat]`) in the `Asia/Ho_Chi_Minh` timezone.
+  * Utilizes `DAILY_REWARD_CONFIG` to grant rewards dynamically based on user role:
+    * **Readers (Role User):** Earn 1 point (Mon-Tue), 2 points (Wed-Thu), 3 points (Fri), 4 points (Sat), 5 points (Sun).
+    * **Authors (Role Author):** Earn 10 to 40 author points (increasing progressively from Mon to Sun).
+* **Endpoints:**
+  * `POST /api/checkin/today`: Processes daily check-in attendance and issues points to the user/author wallet.
+  * `GET /api/checkin/status`: Fetches check-in array state and check eligibility (`canCheckin`) for the current day.
+
+### 3. Achievement System (`/api/achievements`)
+Automates user engagement tracking and milestone incentives:
+* **Database Models:** Designed MongoDB schemas for `Achievement` (milestones metadata, target thresholds, and points reward payload) and `AchievementProgress` (user-specific tracking status).
+* **Event-Driven Tracking (`AchievementEventListener`):**
+  * Implemented NestJS `@nestjs/event-emitter` to asynchronously capture events from different modules.
+  * Listens for: `comment_count` (comments), `follow_count_increase`/`decrease` (following users/stories), `follower_count_increase`/`decrease` (author followers), `rating_count` (ratings), `favorite_story_count` (favorites), `story_create_count` (created stories), `chapter_create_count` (created chapters), and `donation_spend_count` (donated points).
+  * Automatically updates the progress counter in `AchievementProgress` and updates `isCompleted = true` when thresholds are met.
+* **Reward Claims (`POST /api/achievements/:id/claim`):** Validates completed status and increments points (`point` for readers or `author_point` for authors), changing `rewardClaimed = true` to prevent double-claiming.
+* **Progress Synchronization (`POST /api/achievements/sync`):** Sets up progress tracking entries for all users when new achievements are published.
+
+### 4. Financial Management Suite (`Role.FINANCIAL_MANAGER = 'financial_manager'`)
+A secured collection of APIs protected by role guards to manage billing, payouts, and taxes:
+
+#### A. Author KYC Profiles (`/api/payout-profile`)
+* Takers must supply bank and identity details (ID card/passport images) before requesting withdrawals.
+* `GET /api/payout-profile/list`: Retrieves KYC files with status filters.
+* `PATCH /api/payout-profile/approve/:id`: Approves the profile, enabling withdraws.
+* `PATCH /api/payout-profile/reject/:id`: Rejects the profile (rejection reason is required).
+
+#### B. Author Withdrawals (`/api/withdraw`)
+* Authors exchange accumulated author points for cash.
+* `GET /api/withdraw`: Lists withdrawals with support for year/month filtering, status, name search, and pagination.
+* `PATCH /api/withdraw/:id/approve` & `PATCH /api/withdraw/:id/reject`: Approves or rejects the withdraw request.
+
+#### C. Payout Settlement (`/api/payout-settlement`)
+* Tracks payments for approved withdrawal requests in batches.
+* `GET /api/payout-settlement`: Lists payout settlements.
+* `PATCH /api/payout-settlement/pay/:id`: Marks a settlement as paid. The accountant uploads bank transaction receipts/batch files (saved on Cloudinary).
+* `GET /api/payout-settlement/export`: Generates an Excel spreadsheet of payouts in a date range using `ExcelJS` and returns a downloadable link.
+* `PATCH /api/payout-settlement/cancel/:id`: Cancels a payout settlement, reverting withdrawal request statuses.
+* `PATCH /api/payout-settlement/update-paid/:id`: Edits paid proof files or updates notes for a completed settlement.
+
+#### D. Tax Settlement & Compliance (`/api/tax-settlement`)
+* Calculates 10% withholding tax at source for author payouts exceeding 2,000,000 VND, keeping the platform compliant with Vietnamese tax regulations.
+* `GET /api/tax-settlement`: Queries tax settlements.
+* `POST /api/tax-settlement/export`: Generates tax reports:
+  * **QUARTERLY:** Exports a single quarterly declaration Excel sheet.
+  * **ANNUAL:** Creates separate quarterly sheets and bundles them into a `.zip` archive using `archiver`.
+* `PATCH /api/tax-settlement/pay/:id`: Marks tax as paid to the state treasury. The accountant logs the official tax receipt number and uploads receipt documents corresponding to each author in the settlement.
+* `PATCH /api/tax-settlement/update-paid/:id`: Edits uploaded state receipt files or receipt serial numbers.
 
 ---
 
-## My Core Contributions (Backend Architecture & Business Logic)
+## ⚙️ Environment Variables Configuration (.env)
 
-As the primary Backend Developer, I engineered the core financial and engagement modules of the system:
-
-### 1. Payment Gateway Integration (VNPAY)
-- Implemented **VNPAY Sandbox** integration to handle secure point deposits and cash-out/withdrawal workflows.
-- Designed **Payment Redirect processing loops** to securely read transaction return parameters and automate real-time user balance updates.
-
-### 2. Automated Tax Compliance Module
-- Developed a dynamic tax calculation engine driven by custom **Business Rules** and regional tax compliance laws.
-- Processed automated withholding tax deductions during author payout/withdrawal sequences.
-- Built **Data Export features (CSV/Excel)** to streamline transaction histories, helping the accounting team with seamless tax declaration and fiscal settlements.
-
-### 3. Gamification & Retention Logic
-- Designed and optimized database schemas for a **Daily Check-in Reward** system.
-- Engineered a scalable **Achievement System** that tracks user behavior and unlocks milestones dynamically, boosting overall user engagement.
-
----
-
-## ⚙️ Environment Variables Configuration
-
-To run this project, create a `.env` file in the root directory and configure the following variables:
+Create a `.env` file in the root folder of the backend:
 
 ```env
-# Application Configuration
+# Application Settings
 PORT=3000
 JWT_SECRET=your_jwt_secret_key
 CLIENT_URL=http://localhost:3000
 
 # Database
-DATABASE_URL=mongodb+srv://...
+DATABASE_URL=mongodb+srv://<username>:<password>@cluster.mongodb.net/mangaword
 
-# VNPAY Payment Gateway (Sandbox)
-VNP_TMNCODE=your_vnpay_terminal_code
-VNP_HASHSECRET=your_vnpay_hash_secret
-VNP_URL=[https://sandbox.vnpayment.vn/paymentv2/vpcpay.html](https://sandbox.vnpayment.vn/paymentv2/vpcpay.html)
-VNP_RETURNURL=http://localhost:3000/api/vnpay/callback
+# VNPAY Sandbox Configurations
+VNP_TMNCODE=your_vnpay_tmn_code
+VNP_HASHSECRET=your_vnpay_secure_hash_secret
+VNP_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+VNP_RETURNURL=http://localhost:3000/api/vnpay/return
 
-# Google Gemini AI
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-pro
+# Cloudinary Storage Credentials
+CLOUDINARY_NAME=your_cloudinary_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
-# Firebase Admin SDK (Notifications)
+# Gemini AI Credentials
+GEMINI_API_KEY=your_google_gemini_api_key
+
+# Firebase Cloud Messaging Credentials
 PROJECT_ID=your_firebase_project_id
 PRIVATE_KEY="your_firebase_private_key"
 CLIENT_EMAIL=your_firebase_client_email
 
-# SMTP Configuration (Email Notifications)
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
-```
-## Getting Started
-Follow these steps to set up the project locally:
-
-### 1. Clone the Repository
-```bash
-git clone [https://github.com/LGK1412/manga-web-be.git](https://github.com/LGK1412/manga-web-be.git)
-```
-```bash
-cd manga-web-be
+# SMTP Configurations
+SMTP_USER=your_smtp_email@gmail.com
+SMTP_PASS=your_smtp_app_password
 ```
 
-### 2. Install Dependencies
-Make sure you have Node.js installed, then run:
+---
 
-```bash
-npm install
-```
+## 🚀 Getting Started Locally
 
-### 3. Set Up Environment Variables
-Create a .env.local file in the root directory and populate it with your configuration keys as shown in the Environment Variables section above.
-
-### 4. Run the Development Server
-```bash
-npm run start:dev
-```
-The back-end will run at http://localhost:3333, test with Postman or run the front-end (link above) to run the project in browser at http://localhost:3000.
+1. Install project dependencies:
+   ```bash
+   npm install
+   ```
+2. Start the NestJS API server in development mode:
+   ```bash
+   npm run start:dev
+   ```
+   The backend API runs at `http://localhost:3000`. You can test endpoints using Postman or connect the frontend client.
